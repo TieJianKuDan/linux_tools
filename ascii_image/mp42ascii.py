@@ -28,7 +28,7 @@ def get_simple_color_frame(frame, width=120):
     
     return '\n'.join(ascii_frame)
 
-def simple_color_video_play(video_path, target_fps=None, output_width=120):
+def simple_color_video_play(video_path, target_fps=None, output_width=120, flk=False):
     """播放彩色0字符视频"""
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -41,17 +41,25 @@ def simple_color_video_play(video_path, target_fps=None, output_width=120):
         fps = target_fps
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     print(f"视频帧率: {fps} FPS, 总帧数: {frame_count}")
-    frame_interval = 1.0 / fps
+
+    # 更高的帧率才不会闪烁
+    if flk:
+        rate = max(100 // fps, 1)
+    else:
+        rate = 1
+    frame_interval = 1.0 / fps / rate
     
     print("开始播放... (按Ctrl+C退出)")
+    start = time.time()
+    counter = 0
     try:
         while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            # 转换为彩色0字符帧
-            ascii_frame = get_simple_color_frame(frame, output_width)
+            if counter % rate == 0:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                # 转换为彩色0字符帧
+                ascii_frame = get_simple_color_frame(frame, output_width)
             
             # 清空终端并显示
             os.system('cls' if os.name == 'nt' else 'clear')
@@ -59,23 +67,24 @@ def simple_color_video_play(video_path, target_fps=None, output_width=120):
             
             # 控制帧率
             start_time = time.time()
-            if frame_interval > 0:
-                time.sleep(max(0, frame_interval - (time.time() - start_time)))
+            time.sleep(max(0, frame_interval - (time.time() - start_time)))
                 
     except KeyboardInterrupt:
         print("\n用户中断播放")
     finally:
         cap.release()
-        print("播放结束")
+        end = time.time()
+        print(f"播放结束，耗时：{end-start}秒")
 
 def main():
     parser = argparse.ArgumentParser(description='极简彩色0字符视频播放器')
     parser.add_argument('video_path', help='输入视频文件路径')
     parser.add_argument('--fps', type=float, help='目标播放帧率，默认使用原始帧率')
     parser.add_argument('--width', type=int, default=120, help='终端显示宽度，默认120字符')
+    parser.add_argument('--flk', action="store_true", help='是否防止闪烁')
     args = parser.parse_args()
-    
-    simple_color_video_play(args.video_path, target_fps=args.fps, output_width=args.width)
+
+    simple_color_video_play(args.video_path, target_fps=args.fps, output_width=args.width, flk=args.flk)
 
 if __name__ == "__main__":
     main()

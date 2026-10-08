@@ -1,0 +1,8 @@
+*
+!*/
+!.gitignore
+!*.py
+!*.yaml
+!*.md
+!.gitattributes
+!*.sh
